@@ -36,11 +36,14 @@ import traceback
 # This is necessary on Windows, where packages installed in 'develop' mode
 # have priority over the PYTHONPATH.
 try:
+    #print("\n".join(sys.path))
     for path in os.environ['PYTHONPATH'].split(os.pathsep):
         try:
             p = os.path.normpath(path)
+            # print(p)
             sys.path.remove(p)
-        except IndexError:
+        # catch ValueError when p not in the "sys.path" (cf. launched by PyDev)
+        except (IndexError, ValueError ):
             pass
 
         sys.path.insert(0, path)
