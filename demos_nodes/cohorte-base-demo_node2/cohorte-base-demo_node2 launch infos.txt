@@ -1,0 +1,20 @@
+
+#The configuration is set in the  "run_node2.js" file
+
+@see run_node2.js
+
+The parameters set in the launch configuration overwrite those set in the run_node2.js
+
+
+
+#-c, --color   => to have color in the trace
+#-d, --debug   => set the debug level of the trace
+#-v, --verbose => set the verbose level of the trace 
+     
+ Sample:
+               
+--base ${project_loc:cohorte-base-demo_node2}
+--data-dir ${project_loc:cohorte-data-demo_node2}
+--use-config ${project_loc:cohorte-base-demo_node2}/run_node2.js 
+--debug
+--verbose
