@@ -3,6 +3,8 @@
 	<name>cohorte-base-demo_node2</name>
 	<comment></comment>
 	<projects>
+		<project>cohorte-base-demo_node1</project>
+		<project>cohorte-home</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

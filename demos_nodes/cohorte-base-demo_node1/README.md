@@ -1,9 +1,11 @@
 
-#The configuration is set in the  "run_node1.js" file
+#The configuration 
+
+The coonfiguration is set in the  "run_node1.js" file
 
 @see run_node1.js
 
-The parameters set in the launch configuration overwrite those set in the run_node1.js
+The parameters set in the launch configuration overwrite those set in the "run_node1.js" file.
 
 
 
