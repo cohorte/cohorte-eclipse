@@ -550,6 +550,8 @@ def main(args=None):
        COHORTE BASE : {base}
        COHORTE DATA : {data}
  PYTHON INTERPRETER : {python} ({python_version})
+        PYTHON PATH : {pythonpath}
+  OS PATH SEPARATOR : {ospathsep}
            LOG FILE : {logfile}
 
 """.format(home=COHORTE_HOME, base=os.environ['COHORTE_BASE'],
@@ -557,33 +559,38 @@ def main(args=None):
            logfile=os.environ.get('COHORTE_LOGFILE'),
            python=PYTHON_INTERPRETER, 
            python_version=PYTHON_VERSION, 
-           cohorte_version=COHORTE_VERSION)
+           cohorte_version=COHORTE_VERSION,
+           pythonpath="\n\t\t\t".join(os.getenv('PYTHONPATH').split(os.pathsep)),
+           ospathsep=os.pathsep)
 
     print(msg1)
 
     # if java distribution => check python version > 3.4    
 
+    msg2 = ""
     if version["distribution"] not in ("cohorte-python-distribution"):
         # java distribution
         # => should have python 3.4                
         python_version_tuple = tuple(map(int, (PYTHON_VERSION.split("."))))
         if python_version_tuple < (3,4):
-            print("You should have Python 3.4 to launch Java isolates!\n")
-            print("If you need only Python isolates,")
-            print("   please download cohorte-python-distribution which requires only Python 2.7.\n")
-            print("It you have Python 3.4 installed on your machine and its Python 2.x which is used,")
-            print("   use --interpreter <PATH_TO_PYTHON34> argument when starting your node.\n")
+            msg2 = """
+            You should have Python 3.4 to launch Java isolates!
+            If you need only Python isolates, please download cohorte-python-distribution
+            which requires only Python 2.7.
+            It you have Python 3.4 installed on your machine and its Python 2.x which is used,
+            use --interpreter <PATH_TO_PYTHON34> argument when starting your node."""
+            print(msg2)
+            # write to log file
+            with open(str(os.environ.get('COHORTE_LOGFILE')), "w") as log_file:
+                log_file.write(msg1+msg2)
             return 3     
         elif python_version_tuple > (3,4):
-            print("You should have Python 3.4 to launch Java isolates!\n")
-            print("Your Python version is not yet supported!\n")   
+            msg2 = """
+            You should have Python 3.4 to launch Java isolates!
+            Your Python version is not yet supported!""" 
         
         # change jpype implementation depending on platform system
         common.setup_jpype(COHORTE_HOME)        
-
-    # write to log file
-    with open(str(os.environ.get('COHORTE_LOGFILE')), "w") as log_file:
-        log_file.write(msg1)
 
     # starting cohorte isolate
     result_code = 0
@@ -592,9 +599,19 @@ def main(args=None):
     # Interpreter arguments
     interpreter_args = ['-m', 'cohorte.boot.boot']
     if sys.platform == 'cli':
-        # Enable frames support in IronPython
+        # Enable frames support in IronPytho
         interpreter_args.insert(0, '-X:Frames')
 
+    msg3 = """
+    Subprocess: {cmde}
+    """.format(cmde=", ".join([PYTHON_INTERPRETER] + interpreter_args + boot_args))
+
+    print(msg3)
+
+    # write to log file
+    with open(str(os.environ.get('COHORTE_LOGFILE')), "w") as log_file:
+        log_file.write(msg1+msg2+msg3)
+        
     try:
         p = subprocess.Popen(
             [PYTHON_INTERPRETER] + interpreter_args + boot_args,
