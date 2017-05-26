@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<launchConfiguration type="org.python.pydev.debug.regularLaunchConfigurationType">
+<stringAttribute key="bad_container_name" value="/cohorte-base-demo_isol"/>
+<listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_PATHS">
+<listEntry value="/cohorte-home/bin/scripts/cohorte-start-node.py"/>
+</listAttribute>
+<listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_TYPES">
+<listEntry value="1"/>
+</listAttribute>
+<mapAttribute key="org.eclipse.debug.core.environmentVariables">
+<mapEntry key="COHORTE_HOME" value="${project_loc:cohorte-home}"/>
+</mapAttribute>
+<stringAttribute key="org.eclipse.ui.externaltools.ATTR_LOCATION" value="${project_loc:cohorte-home}/bin/scripts/cohorte-start-node.py"/>
+<stringAttribute key="org.eclipse.ui.externaltools.ATTR_OTHER_WORKING_DIRECTORY" value="${project_loc:cohorte-data-demo_isolates}/var"/>
+<stringAttribute key="org.eclipse.ui.externaltools.ATTR_TOOL_ARGUMENTS" value="--base ${project_loc:cohorte-base-demo_isolates}&#10;--data-dir ${project_loc:cohorte-data-demo_isolates}&#10;--use-config ${project_loc:cohorte-base-demo_isolates}/run_node0.js &#10;--debug&#10;--verbose"/>
+<stringAttribute key="org.eclipse.ui.externaltools.ATTR_WORKING_DIRECTORY" value="${project_loc:cohorte-data-demo_isolates}/var"/>
+<stringAttribute key="org.python.pydev.debug.ATTR_INTERPRETER" value="__default"/>
+<stringAttribute key="org.python.pydev.debug.ATTR_PROJECT" value="cohorte-base-demo_isolates"/>
+<stringAttribute key="process_factory_id" value="org.python.pydev.debug.processfactory.PyProcessFactory"/>
+</launchConfiguration>
