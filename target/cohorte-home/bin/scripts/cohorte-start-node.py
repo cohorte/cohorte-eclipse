@@ -59,33 +59,52 @@ def parse_config_file(config_file):
 def get_external_config(parsed_conf_file, conf_name):
     """
     Returns the value of the wanted startup configuration.
+    
+    {
+        "node": {
+            "name":"node-activup_distance",
+            "kind-of-isolates":"python-only",
+            "top-composer": true,
+            "console": true,
+            "use-cache":false,
+            "interpreter":"python",
+            "shell-port": 16000,
+            "http-port": 9000
+        },
+        "app-id": "activeup-distance-app",
+        "cohorte-version": "1.2.0",
+        "transport-http": {
+            "http-ipv": 4
+        },
+        "transport": []
+    }    
     """
     if parsed_conf_file is not None and conf_name is not None:
+        
         if conf_name == "app-id":
             if "app-id" in parsed_conf_file:
                 return parsed_conf_file["app-id"]
-            elif "application-id" in parsed_conf_file:     # compatibility with cohorte 1.0.0
-                return parsed_conf_file["application-id"]  #
+            # compatibility with cohorte 1.0.0
+            elif "application-id" in parsed_conf_file:     
+                return parsed_conf_file["application-id"]
 
-        if conf_name == "node-name":
-            if "node" in parsed_conf_file:
-                # Different key name
-                return parsed_conf_file["node"].get("name")
-            # return parsed_conf_file["node"].get(conf_name)
 
-        if conf_name in ("top-composer", "auto-start", "composition-file",
-                         "http-port", "shell-port", "use-cache",
-                         "recomposition-delay", "interpreter", "console",
-                         "data-dir"):
+        if conf_name in ("node-name","kind-of-isolates","top-composer", "auto-start", 
+                         "composition-file","http-port", "shell-port", "use-cache",
+                         "recomposition-delay", "interpreter", "console","data-dir"):
             if "node" in parsed_conf_file:
                 conf_value = parsed_conf_file["node"].get(conf_name)
-                if conf_value is None:                                      #
-                    if conf_name in "http-port":                            # compatibility with cohorte 1.0.0
-                        return parsed_conf_file["node"].get("web-admin")    #
-                    if conf_name in "shell-port":                           #
-                        return parsed_conf_file["node"].get("shell-admin")  #
-                else:
+                if conf_value != None:
                     return conf_value
+                # Different key name managment !
+                if conf_name in "node-name":                            
+                    return parsed_conf_file["node"].get("name")
+                # compatibility with cohorte 1.0.0               
+                if conf_name in "http-port":
+                    return parsed_conf_file["node"].get("web-admin")
+                # compatibility with cohorte 1.0.0
+                if conf_name in "shell-port":
+                     return parsed_conf_file["node"].get("shell-admin")
 
         if conf_name == "transport":
             if "transport" in parsed_conf_file:
@@ -167,7 +186,10 @@ def main(args=None):
 
     group.add_argument("-n", "--node", action="store",
                        dest="node_name", help="Node name")
-
+    
+    group.add_argument("-k", "--kind-of-isolates", action="store",
+                       dest="kind_of_isolates", help="Kind of Isolate : ['python-only' | 'python-java']")
+    
     group.add_argument("--data-dir", action="store",
                        dest="node_data_dir", help="Node Data Dir")
 
@@ -232,6 +254,8 @@ def main(args=None):
     args, boot_args = parser.parse_known_args(args)
     COHORTE_BASE = args.base_absolute_path
     NODE_NAME = "node"
+    # eg.  --kind-of-isolates=python-only  or  --kind-of-isolates=python-java or  "kind-of-isolates":"python-only",   in json config
+    KIND_OF_ISOLATES = "python-java"
     NODE_DATA_DIR = ""
     TRANSPORT_MODES = []
     HTTP_PORT = 0
@@ -312,11 +336,19 @@ def main(args=None):
             args.interpreter,
             get_external_config( external_config, "interpreter"), "python")
     os.environ['PYTHON_INTERPRETER'] = str(PYTHON_INTERPRETER)
+    
     # export Node name
     NODE_NAME = set_configuration_value(
-        args.node_name, get_external_config(external_config, "node-name"),
+        args.node_name, 
+        get_external_config(external_config, "node-name"),
         os.path.basename(os.path.normpath(COHORTE_BASE)))
     os.environ['COHORTE_NODE_NAME'] = NODE_NAME
+    
+    # export kind of isolates :  "python-only" or "python-java"
+    KIND_OF_ISOLATES = set_configuration_value(
+        args.kind_of_isolates, 
+        get_external_config(external_config, "kind-of-isolates"),"python-java")
+    os.environ['KIND_OF_ISOLATES'] = KIND_OF_ISOLATES
 
     # export Cohorte Root
     os.environ['COHORTE_ROOT'] = os.environ.get('COHORTE_HOME')
@@ -527,14 +559,18 @@ def main(args=None):
     
      APPLICATION ID : {appid}
           NODE NAME : {node_name}
+   KIND OF ISOLATES : {kind_of_isolates}
          TRANSPORTS : {transports}
 
        TOP COMPOSER : {is_top}
 
           HTTP PORT : {http_port}
          SHELL PORT : {shell_port}
-""".format(appid=APPLICATION_ID, node_name=os.environ.get('COHORTE_NODE_NAME'),
-           transports=",".join(TRANSPORT_MODES), is_top=IS_TOP_COMPOSER,
+""".format(appid=APPLICATION_ID, 
+           node_name=os.environ.get('COHORTE_NODE_NAME'),
+           kind_of_isolates=os.environ.get('KIND_OF_ISOLATES'),
+           transports=",".join(TRANSPORT_MODES), 
+           is_top=IS_TOP_COMPOSER,
            http_port=HTTP_PORT, shell_port=SHELL_PORT)
 
     if IS_TOP_COMPOSER:
@@ -565,20 +601,24 @@ def main(args=None):
 
     print(msg1)
 
-    # if java distribution => check python version > 3.4    
+    # if java distribution => check python version > 3.4 if all the isolates aren't Python ones
 
     msg2 = ""
-    if version["distribution"] not in ("cohorte-python-distribution"):
+    if version["distribution"] not in ("cohorte-python-distribution") and KIND_OF_ISOLATES != "python-only":
         # java distribution
         # => should have python 3.4                
         python_version_tuple = tuple(map(int, (PYTHON_VERSION.split("."))))
         if python_version_tuple < (3,4):
             msg2 = """
-            You should have Python 3.4 to launch Java isolates!
-            If you need only Python isolates, please download cohorte-python-distribution
-            which requires only Python 2.7.
+            As all the isolates of the node aren't Python ones, you should have Python 3.4 to launch Java isolates !
+            
+            If your node has only Python isolates, please download cohorte-python-distribution which requires 
+            Python 2.7 or 3.4, or set the Kind of Isolates you want.
+            @lookat :  --kind-of-isolates=['python-only' | 'python-java']
+
             It you have Python 3.4 installed on your machine and its Python 2.x which is used,
-            use --interpreter <PATH_TO_PYTHON34> argument when starting your node."""
+            set the "setintrepreter" argument when starting your node.
+            @lookat : --interpreter <PATH_TO_PYTHON34> """
             print(msg2)
             # write to log file
             with open(str(os.environ.get('COHORTE_LOGFILE')), "w") as log_file:
