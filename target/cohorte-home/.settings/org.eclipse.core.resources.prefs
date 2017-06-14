@@ -1,0 +1,7 @@
+eclipse.preferences.version=1
+encoding//repo/requests/__init__.py=utf-8
+encoding//repo/requests/adapters.py=utf-8
+encoding//repo/requests/api.py=utf-8
+encoding//repo/requests/models.py=utf-8
+encoding//repo/requests/sessions.py=utf-8
+encoding//repo/requests/utils.py=utf-8
