@@ -7,6 +7,7 @@ Startup scripts common file.
 :license: Apache Software License 2.0
 
 :hostory:
+    MOD_BD_20170306: enhance setup_jpype to support win32 bits
     MOD_BD_20161010: adding setup_jpype function
 
 ..
@@ -27,14 +28,14 @@ Startup scripts common file.
 """
 
 # Standard Library
-import platform
-import os
 import json
+import os
+import platform
 import shutil
-
-from stat import S_IRWXU  # Read, write, and execute by owner
-from stat import S_IRWXG  # Read, write, and execute by group
 from stat import S_IROTH  # Read by others
+from stat import S_IRWXG  # Read, write, and execute by group
+from stat import S_IRWXU  # Read, write, and execute by owner
+
 
 # Documentation strings format
 __docformat__ = "restructuredtext en"
@@ -138,7 +139,6 @@ def generate_boot_common(node_dir, app_name, data_dir):
 
     result = """{header}
 {{
-    "import-files" : [ "boot-common.js" ],
     "properties" : {{
         {content}
     }}
@@ -159,7 +159,6 @@ def generate_boot_forker(node_dir, http_port, shell_port):
 
     result = """{header}
 {{
-    "import-files" : [ "boot-forker.js" ],
     "composition" : [
     {{
         "name" : "pelix-http-service",
@@ -364,18 +363,26 @@ def show_installed_dist_info(dist):
     """
     Shows the installed distribution's version information.
     """
-    print("")
-    print("-----------------[ Installed COHORTE distribution ]--------------------")
-    print("")
-    print("    - distribution : " + dist["distribution"])
-    print("    - version      : " + dist["version"])
-    print("    - stage        : " + dist["stage"])
-    print("    - timestamp    : " + dist["timestamp"])
-    print("    - location     : " + os.environ.get('COHORTE_HOME'))
-    print("")
-    print("-----------------------------------------------------------------------")
-    print("")
+    msg = """\n'\
+    '-----------------[ Installed COHORTE distribution ]--------------------\n
+    '    - distribution : {0}
+    '    - version      : {1}
+    '    - stage        : {2}
+    '    - timestamp    : {3}
+    '    - git branch   : {4}
+    '    - git commit   : {5}
+    '    - location     : {6}\n
+    '-----------------------------------------------------------------------\n"""
+    distribution = dist["distribution"] if "distribution" in dist else "None"
+    version = dist["version"] if "version" in dist else "None"
+    stage = dist["stage"] if "stage" in dist else "None"
+    timestamp = dist["timestamp"] if "timestamp" in dist else "None"
+    git_branch = dist["git_branch"] if "git_branch" in dist else "None"
+    git_commit = dist["git_commit"] if "git_commit" in dist else "None"
+    COHORTE_HOME = dist["COHORTE_HOME"] if "COHORTE_HOME" in dist else "None"
 
+    print(msg.format(distribution, version, stage, timestamp, git_branch, git_commit, COHORTE_HOME))
+    
 def setup_jpype(cohorte_home):
     platform_name = platform.system()
     # possible values: 'Linux', 'Windows', or 'Darwin'        
@@ -403,11 +410,18 @@ def setup_jpype(cohorte_home):
                 if fname.startswith("_jpype"):
                     os.remove(os.path.join(repo_dir, fname))
             # install adequate jpype                
-            shutil.copytree(os.path.join(extra_dir, "jpype"), 
+            shutil.copytree(os.path.join(extra_dir, "jpype"),
                         os.path.join(repo_dir, "jpype"))
-            shutil.copytree(os.path.join(extra_dir, "jpypex"), 
+            shutil.copytree(os.path.join(extra_dir, "jpypex"),
                         os.path.join(repo_dir, "jpypex"))
-            shutil.copyfile(os.path.join(extra_dir, platform_name, jpype_file_name),
-                        os.path.join(repo_dir, jpype_file_name))        
+            # MOD_BD_20170306 support win 32 bits
+            if "32bit" in platform.architecture():
+                source_jpype_file = os.path.join(extra_dir, str(platform_name).lower(), "32", jpype_file_name)
+            else:
+                source_jpype_file = os.path.join(extra_dir, str(platform_name).lower(), jpype_file_name)
+            
+            shutil.copyfile(source_jpype_file, os.path.join(repo_dir, jpype_file_name))        
+            
+
         except OSError:
             pass

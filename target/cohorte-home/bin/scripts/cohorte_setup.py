@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -- Content-Encoding: UTF-8 --
 """
-Shows installed Cohorte distribution's version.
+Install the good version of JPype
 :author: Bassem Debbabi
 :license: Apache Software License 2.0
 ..
-    Copyright 2015 isandlaTech
+    Copyright 2015-2016 Cohorte Technologies (ex. ISANDLATECH)
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
@@ -17,8 +17,8 @@ Shows installed Cohorte distribution's version.
     limitations under the License.
 """
 
-import sys
 import os
+import sys
 
 # cohorte scripts
 import common
@@ -30,18 +30,22 @@ __docformat__ = "restructuredtext en"
 __version__ = "1.0.0"
 
 
-def main(args=None):
+def main(argv):
     """
     main script
     """
-    # Test if the COHORTE_HOME environment variable is set. If not exit
-    COHORTE_HOME = os.environ.get('COHORTE_HOME')
+    # Test if COHORTE_HOME is given as parameter, otherelse, get it from OS 
+    if len(argv) > 0:        
+        COHORTE_HOME = argv[0]
+    else:        
+        COHORTE_HOME = os.environ.get('COHORTE_HOME')
+    # Test if the COHORTE_HOME is set. If not exit
     if not COHORTE_HOME:
         print("[ERROR] environment variable COHORTE_HOME not set")
         return 1
-    # Show actual version    
+    # install   
     common.setup_jpype(COHORTE_HOME)    
     return 0
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

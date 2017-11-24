@@ -360,6 +360,7 @@ class IPopoRepository(object):
             for repository in self._repositories:
                 for artifact in repository.walk():
                     try:
+                     
                         self.add_artifact(artifact)
                     except ValueError as ex:
                         # Log the exception instead of stopping here

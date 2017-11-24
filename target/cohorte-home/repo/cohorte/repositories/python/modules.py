@@ -315,7 +315,7 @@ class PythonModuleRepository(object):
             # find_module() uses a path-like name, not a dotted one
             path_name = name.replace('.', os.sep)
             result = imp.find_module(path_name)
-        except ImportError:
+        except ImportError as e:
             # Module not found
             return False
         else:
@@ -379,6 +379,7 @@ class PythonModuleRepository(object):
                     and not self.__is_module(root):
                 continue
             for filename in filenames:
+           
                 if os.path.splitext(filename)[1] == '.py':
                     fullname = os.path.join(root, filename)
                     try:

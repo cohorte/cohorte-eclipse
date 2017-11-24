@@ -69,9 +69,10 @@ _logger = logging.getLogger(__name__)
 @Requires('_commander', cohorte.composer.SERVICE_COMMANDER_TOP)
 @Requires('_monitor', cohorte.monitor.SERVICE_MONITOR)
 @Requires('_node_starter', cohorte.SERVICE_NODE_STARTER)
+@Requires('_includer', cohorte.SERVICE_FILE_INCLUDER)
 # ######### added by: Bassem D.
-@Requires('_parser', cohorte.composer.SERVICE_PARSER, optional=False)
-@Requires('_reader', cohorte.SERVICE_FILE_READER, optional=False)
+@Requires('_parser', cohorte.composer.SERVICE_PARSER,
+          optional=False)
 @Property('_autostart', 'autostart', "True")
 @Property('_composition_filename', 'composition.filename', "composition.js")
 # #########
@@ -89,9 +90,9 @@ class TopComposer(object):
         self._commander = None
         self._context = None
         self._node_starter = None
+        self._includer = None
         # ######### added by: Bassem D.
         self._parser = None
-        self._reader = None
         self._autostart = None
         self._composition_filename = None
         self._composition_json = None 
@@ -131,10 +132,8 @@ class TopComposer(object):
         if str(self._autostart).lower() in ("true", "yes"):
             # Load the composition
             try:
-                self._composition_json = self._reader.load_file(
-                        self._composition_filename, "conf")                
-                composition = self._parser.parse_composition(
-                    self._composition_filename, self._composition_json)
+                composition = self._parser.load(
+                    self._composition_filename, "conf")
                 if composition:
                     _logger.info("Loading composition...")
                     uid = self.start(composition)
@@ -231,5 +230,10 @@ class TopComposer(object):
     def get_composition_json(self):
         """
         Gets composition JSON file raw content
-        """        
+        """
+        if not self._composition_json:
+            # parse the composition file
+            #conf_dir = os.path.join(self._context.get_property("cohorte.base"), )
+            self._composition_json = self._includer.get_content("conf"+os.sep+self._composition_filename,True)
+            
         return self._composition_json
