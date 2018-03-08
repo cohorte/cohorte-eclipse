@@ -4,7 +4,7 @@
 COHORTE config utilities
 
 
-:author: Aurelien PISU
+:author: Aurélien PISU
 :license: Apache Software License 2.0
 
 ..
@@ -27,12 +27,10 @@ COHORTE config utilities
 import logging
 import re
 
-
 _logger = logging.getLogger(__name__)
 
-
-
 regexp_replace_var = re.compile("\\$\\{(.+?)\\}", re.MULTILINE)
+
 
 def replace_vars(params, contents):
     """
@@ -45,42 +43,53 @@ def replace_vars(params, contents):
         contents = [contents]
     replace_contents = []
 
-    if params != None:
+    if params != None and contents != None:
         for content in contents:
             replace_content = content
             for match in regexp_replace_var.findall(content):
                 if match in params:
-                    replace_content = replace_content.replace("${" + match + "}", params[match][0])
+                    w_param = params[match][0].__str__()
+                    _logger.debug("match variable {} , replace by {}".format(match, w_param))
+                    if not w_param.isdigit():
+                        w_param = w_param.replace("\"", "").replace("\'", "").replace("\\", "\\\\")
+                        replace_content = replace_content.replace("${" + match + "}", w_param)
+                    else:
+                        replace_content = replace_content.replace("\"${" + match + "}\"", w_param)
+                    
                 else:
                     replace_content = replace_content.replace("${" + match + "}", "") 
+            _logger.debug("replace_content={}".format(replace_content))
             replace_contents.append(replace_content)
     return replace_contents
 
+
 def _find_equivalent(searched_dict, dicts_list):
-      """
-      Finds the item in the given list which has the same ID than the given
-      dictionary.
+    """
+    Finds the item in the given list which has the same ID than the given
+    dictionary.
+    
+    A dictionary is equivalent to another if they have the same value for
+    one of the following keys: 'id', 'uid', 'name'.
+    
+    :param searched_dict: The dictionary to look for into the list
+    :param dicts_list: A list of potential equivalents
+    :return: The first item found in the list equivalent to the given
+             dictionary, or None
+    """
+    for id_key in ('id', 'uid', 'name'):
+        # Recognize the ID key used, if any
+        local_id = searched_dict.get(id_key)
+        if local_id:
+            # Found an ID
+            for other_item in dicts_list:
+                if other_item.get(id_key) == local_id:
+                    # Found an item with the same ID
+                    return other_item
+    
+    # Found nothings
+    return None
 
-      A dictionary is equivalent to another if they have the same value for
-      one of the following keys: 'id', 'uid', 'name'.
-
-      :param searched_dict: The dictionary to look for into the list
-      :param dicts_list: A list of potential equivalents
-      :return: The first item found in the list equivalent to the given
-               dictionary, or None
-      """
-      for id_key in ('id', 'uid', 'name'):
-          # Recognize the ID key used, if any
-          local_id = searched_dict.get(id_key)
-          if local_id:
-              # Found an ID
-              for other_item in dicts_list:
-                  if other_item.get(id_key) == local_id:
-                      # Found an item with the same ID
-                      return other_item
-
-      # Found nothing
-      return None
+  
 def merge_object(local, imported):
     """
     Merges recursively two JSON objects.
@@ -101,13 +110,6 @@ def merge_object(local, imported):
             # Get current value
             cur_value = local[key]
             cur_type = type(cur_value)
-
-            if cur_type is not type(imp_value):
-                # Different types found
-                _logger.warning("Trying to merge different types. "
-                                "Ignoring. (key: %s, types: %s / %s)",
-                                key, cur_type, type(imp_value))
-                continue
 
             if cur_type is dict:
                 # Merge children

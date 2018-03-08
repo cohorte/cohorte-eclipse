@@ -19,12 +19,9 @@ import pelix.ipopo.constants as constants
 
 # ------------------------------------------------------------------------------
 
-# Documentation strings format
-__docformat__ = "restructuredtext en"
-
-# Version
-__version_info__ = (1, 1, 0)
-__version__ = ".".join(str(x) for x in __version_info__)
+# Bundle version
+import cohorte.version
+__version__=cohorte.version.__version__
 
 # ------------------------------------------------------------------------------
 
@@ -59,6 +56,7 @@ def boot_load(context, boot_config):
             context.install_bundle(bundle.name).start()
         except pelix.framework.BundleException as ex:
             if bundle.optional:
+                logger.exception(ex)
                 # The error can be ignored
                 logger.info("Error installing bundle '%s': %s",
                             bundle.name, ex)

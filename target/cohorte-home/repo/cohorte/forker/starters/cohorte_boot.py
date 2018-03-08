@@ -26,34 +26,31 @@ Starts Cohorte isolates using the boot script
 
 
 # Standard library
-import cohorte
-import cohorte.forker
-import cohorte.monitor
-import cohorte.utils
 import logging
 import os
-from pelix.ipopo.decorators import ComponentFactory, Requires, Provides, \
-    Property, Instantiate
 import subprocess
 import sys
 
+import cohorte
+import cohorte.forker
 import cohorte.forker.starters.common as common
+import cohorte.monitor
+import cohorte.utils
+import cohorte.version
 from herald import beans
 import herald
 from herald.exceptions import HeraldException
 import pelix.http as http
+from pelix.ipopo.decorators import ComponentFactory, Requires, Provides, \
+    Property, Instantiate
 
 
 # Pelix framework
 # COHORTE modules
 # Herald
 # ------------------------------------------------------------------------------
-# Documentation strings format
-__docformat__ = "restructuredtext en"
-
-# Version
-__version_info__ = (1, 1, 0)
-__version__ = ".".join(str(x) for x in __version_info__)
+# Bundle version
+__version__ = cohorte.version.__version__
 
 # ------------------------------------------------------------------------------
 

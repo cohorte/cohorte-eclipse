@@ -26,25 +26,21 @@ Parses JSON files and handles "import-files" and "from-file" special fields.
 """
 
 # Python standard library
-import cohorte
 import json
 import logging
 import os
+
+import cohorte
+import cohorte.config.common as common
+import cohorte.version
 from pelix.ipopo.decorators import ComponentFactory, Provides, Instantiate, \
     Requires, Property
-
-import cohorte.config.common as common
-
 
 # iPOPO Decorators
 # COHORTE constants
 # ------------------------------------------------------------------------------
-# Documentation strings format
-__docformat__ = "restructuredtext en"
-
-# Version
-__version_info__ = (1, 1, 0)
-__version__ = ".".join(str(x) for x in __version_info__)
+# Bundle version
+__version__ = cohorte.version.__version__
 
 # ------------------------------------------------------------------------------
 
@@ -86,6 +82,7 @@ class ConfigurationFileReader(object):
     The overridden properties, defined using the 'overriddenProperties' key,
     are applied on the 'properties' field, then on the object itself.
     """
+
     def __init__(self):
         """
         Sets up the parser
@@ -93,7 +90,6 @@ class ConfigurationFileReader(object):
     
         # the File includer
         self._includer = None
-
 
     @staticmethod
     def _compute_overridden_props(json_object, overriding_props):
@@ -185,7 +181,6 @@ class ConfigurationFileReader(object):
                 new_props = self._compute_overridden_props(json_data,
                                                            overridden_props)
 
-
                 imported_data = self._load_file(from_filename, filename,
                                                 new_props, include_stack)
 
@@ -243,10 +238,6 @@ class ConfigurationFileReader(object):
 
         # Nothing to do
         return json_data
-
- 
-
-   
  
     def _load_file(self, filename, base_file, overridden_props, include_stack):
         """
@@ -268,8 +259,8 @@ class ConfigurationFileReader(object):
 
         json_data = self._includer.get_content(fullfilename, True)
         # Parse the file and resolve inclusions
-        self._do_recursive_imports(fullfilename, json_data,
-                                          overridden_props, include_stack)  
+        # self._do_recursive_imports(fullfilename, json_data,
+        #                                  overridden_props, include_stack)  
         # Remove the top of the stack before returning
         # include_stack.pop()
         

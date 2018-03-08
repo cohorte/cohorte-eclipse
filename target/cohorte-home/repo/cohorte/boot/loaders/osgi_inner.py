@@ -32,20 +32,21 @@ Modifications:
 """
 
 # Python standard library
-import cohorte
-import cohorte.repositories
 import logging
 import os
-import pelix.framework
-from pelix.ipopo.decorators import ComponentFactory, Provides, Validate, \
-    Invalidate, Property, Requires
-import pelix.shell
 import sys
 import threading
 import time
 
+import cohorte
+import cohorte.repositories
+import cohorte.version
 import herald
 import jpype
+import pelix.framework
+from pelix.ipopo.decorators import ComponentFactory, Provides, Validate, \
+    Invalidate, Property, Requires
+import pelix.shell
 
 
 # iPOPO Decorators
@@ -53,12 +54,8 @@ import jpype
 # Herald
 # JPype (Java bridge)
 # ------------------------------------------------------------------------------
-# Documentation strings format
-__docformat__ = "restructuredtext en"
-
-# Version
-__version_info__ = (1, 1, 0)
-__version__ = ".".join(str(x) for x in __version_info__)
+# Bundle version
+__version__ = cohorte.version.__version__
 
 # ------------------------------------------------------------------------------
 
@@ -86,7 +83,7 @@ PYTHON_BRIDGE_BUNDLE = "org.cohorte.pyboot"
 PYTHON_JAVA_BRIDGE_INTERFACE = "org.cohorte.pyboot.api.IPyBridge"
 """ Interface of the Python - Java bridge """
 
-HERALD_EVENT_BUNDLE_API = "org.cohorte.herald.eventapi"
+HERALD_BUNDLE_API = "org.cohorte.herald.api"
 """ Name of the bundle and package which contain the Herald Event API """
 
 HERALD_EVENT_INTERFACE = "org.cohorte.herald.eventapi.IEvent"
@@ -459,10 +456,10 @@ class JavaOsgiLoader(object):
             # Prepare the "extra system package" framework property
             if extra_packages:
                 new_extra_packages = "{0}; version=1.0.0, {1}; version=1.0.0,{2}".format(
-                    PYTHON_BRIDGE_BUNDLE_API, HERALD_EVENT_BUNDLE_API, extra_packages)
+                    PYTHON_BRIDGE_BUNDLE_API, HERALD_BUNDLE_API, extra_packages)
             else:
                 new_extra_packages = "{0}; version=1.0.0, {1}; version=1.0.0".format(
-                    PYTHON_BRIDGE_BUNDLE_API, HERALD_EVENT_BUNDLE_API)
+                    PYTHON_BRIDGE_BUNDLE_API, HERALD_BUNDLE_API)
         else:
             if extra_packages:
                 new_extra_packages = "{0}".format(extra_packages)
@@ -507,7 +504,8 @@ class JavaOsgiLoader(object):
             # Prepare the JVM properties definitions
             for key, value in self._setup_vm_properties(properties).items():
                 java_args.append(self._java.make_jvm_property(key, value))
-
+                
+            _logger.info("java argument {}".format(java_args))
             self._java.start(None, *java_args)
         else:
             # Add the JAR to the class path
@@ -614,6 +612,8 @@ class JavaOsgiLoader(object):
         if not configuration:
             raise KeyError("A configuration is required to load a "
                            "Java OSGi isolate")
+            
+        _logger.debug("configuration {0}".format(configuration))
 
         # Parse the configuration (boot-like part) -> Might raise error
         java_config = self._config.load_boot_dict(configuration)
@@ -637,12 +637,13 @@ class JavaOsgiLoader(object):
 
         # Find the Herald API JAR file
         herald_event_jar = self._repository.get_artifact(
-            HERALD_EVENT_BUNDLE_API)
+            HERALD_BUNDLE_API)
         if herald_event_jar:
             # Add the bundle to the class path...
             classpath.append(herald_event_jar.file)
         else:
             raise Exception("Herald Event API bundle is missing")
+
 
         # Start the JVM
         _logger.debug("Starting JVM...")

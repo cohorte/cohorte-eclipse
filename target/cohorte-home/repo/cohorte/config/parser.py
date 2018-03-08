@@ -31,19 +31,15 @@ import uuid
 
 import cohorte
 import cohorte.config.common as common
+import cohorte.version
 from pelix.ipopo.decorators import ComponentFactory, Provides, Instantiate, \
     Requires
-
 
 # iPOPO Decorators
 # COHORTE constants
 # ------------------------------------------------------------------------------
-# Documentation strings format
-__docformat__ = "restructuredtext en"
-
-# Version
-__version_info__ = (1, 1, 0)
-__version__ = ".".join(str(x) for x in __version_info__)
+# Bundle version
+__version__ = cohorte.version.__version__
 
 # ------------------------------------------------------------------------------
 
@@ -101,6 +97,7 @@ class BootConfigParser(object):
     """
     Boot configuration parser
     """
+
     def __init__(self):
         """
         Sets up the members
@@ -144,7 +141,7 @@ class BootConfigParser(object):
         if not bundles:
             return []
 
-        return [self._parse_bundle(bundle) for bundle in bundles]
+        return [self._parse_bundle(bundle) for bundle in bundles if len(bundle.keys()) > 0 ]
 
     @staticmethod
     def _parse_component(json_object):
@@ -180,7 +177,7 @@ class BootConfigParser(object):
         """
         if not components:
             return []
-        return [self._parse_component(component) for component in components]
+        return [self._parse_component(component) for component in components if len(component.keys()) > 0 ]
 
     def _parse_isolate(self, json_object):
         """
@@ -246,6 +243,8 @@ class BootConfigParser(object):
             new_compo.extend(_recursive_namedtuple_convert(composition))
 
         # Return the configuration dictionary
+        _logger.debug("_prepare_configuration configuration = {}".format(configuration))   
+
         return configuration
 
     @staticmethod
@@ -366,21 +365,28 @@ class BootConfigParser(object):
         """
         # Load the isolate model file
         configuration = self.load_conf_raw(level, sublevel)
-
+        _logger.info("load isolate conf file {}.js".format(name))
         try:
             # Try to load the isolate-specific configuration
             # without logging "file not found" errors
             isolate_conf = self.read(name + ".js", False)
-        except IOError:
-            # Ignore I/O errors (file not found)
-            # Propagate ValueError (parsing errors)
-            pass
-        else:
+            if isolate_conf == None:
+                isolate_conf = self.read("isolate_" + name + ".js", False)
+        except Exception:
+            try:
+                isolate_conf = self.read("isolate_" + name + ".js", False)
+            except Exception as e:
+                _logger.error("can't load isolate_config=[{}]".format(name))
+                _logger.exception(e)
+                raise e
+            
+        if isolate_conf is not None:
             # Merge the configurations: this method considers that the first
             # parameter has priority on the second
             configuration = common.merge_object(isolate_conf,
                                                       configuration)
-
+            
+        _logger.debug("isolate configuration = {}".format(configuration))   
         # Extend with the boot configuration
         return self._prepare_configuration(uid, name, kind,
                                            bundles, composition, configuration)

@@ -6,8 +6,11 @@
 	 * Import the common configuration for Python isolates, and the Node
 	 * Composer
 	 */
-	"import-files" : [ "boot-common-py.js", "python-common-http.js",
-			"composer/python-node.js" ],
+	"$merge" : [
+		"boot-common-py.js", 
+		"python-common-http.js",
+		"composer/python-node.js" 
+	],
 
 	"bundles" : [
 	/*
@@ -80,15 +83,17 @@
 	/* Configuration of common components */
 	{
 		"name" : "pelix-http-service",
+		"factory" : "pelix.http.service.basic.factory",
+
 		"properties" : {
 			// Standard forker HTTP port
-			"pelix.http.port" : 8000
+			"pelix.http.port" : "${run:node.http-port}"
 		}
 	}, {
 		"name" : "pelix-remote-shell",
 		"properties" : {
 			// Standard forker remote shell port
-			"pelix.shell.port" : 8001
+			"pelix.shell.port" : "${run:node.shell-port}"
 		}
 	},
 

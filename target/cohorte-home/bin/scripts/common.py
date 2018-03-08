@@ -29,13 +29,15 @@ Startup scripts common file.
 
 # Standard Library
 import json
+import logging
 import os
 import platform
 import shutil
 from stat import S_IROTH  # Read by others
 from stat import S_IRWXG  # Read, write, and execute by group
 from stat import S_IRWXU  # Read, write, and execute by owner
-
+import sys
+import time
 
 # Documentation strings format
 __docformat__ = "restructuredtext en"
@@ -113,141 +115,6 @@ def generate_composition_conf(node_dir, app_name):
         composition.write(result)
 
 
-def generate_boot_common(node_dir, app_name, data_dir):
-    """
-    Generates boot-common.js file which defines the application's id on which
-    the node will be connected.
-    """
-    conf_dir = os.path.join(node_dir, 'conf')
-    if not os.path.exists(conf_dir):
-        os.makedirs(conf_dir)
-    file_name = os.path.join(conf_dir, "boot-common.js")
-
-    # Protect data directory format
-    # (no need for '"' afterwards)
-    data_dir = json.dumps(data_dir)
-
-    if app_name is not None:
-        content = """
-    "herald.application.id" : "{app_name}",
-    "cohorte.node.data.dir" : {data_dir}
-""".format(app_name=app_name, data_dir=data_dir)
-    else:
-        content = """
-    "cohorte.node.data.dir" : {data_dir}
-""".format(data_dir=data_dir)
-
-    result = """{header}
-{{
-    "properties" : {{
-        {content}
-    }}
-}}
-""".format(header=WARNING_COMMENT, content=content)
-
-    with open(file_name, "w") as boot_common:
-        boot_common.write(result)
-
-
-def generate_boot_forker(node_dir, http_port, shell_port):
-    """
-    Generates conf/boot_forker.js file.
-    """
-    conf_dir = os.path.join(node_dir, 'conf')
-    if not os.path.exists(conf_dir):
-        os.makedirs(conf_dir)
-
-    result = """{header}
-{{
-    "composition" : [
-    {{
-        "name" : "pelix-http-service",
-        "properties" : {{
-            "pelix.http.port" : {http_port}
-        }}
-    }}, {{
-        "name" : "pelix-remote-shell",
-        "properties" : {{
-            "pelix.shell.port" : {shell_port}
-        }}
-    }}
-    ]
-}}
-""".format(header=WARNING_COMMENT, http_port=http_port, shell_port=shell_port)
-
-    file_name = os.path.join(conf_dir, "boot-forker.js")
-    with open(file_name, "w") as boot_forker:
-        boot_forker.write(result)
-
-
-def generate_herald_conf(node_dir, transport_modes, server, port,
-                         user, password):
-    """
-    Generates Herald XMPP transport configuration
-    """
-    conf_dir = os.path.join(node_dir, 'conf')
-    if not os.path.exists(conf_dir):
-        os.makedirs(conf_dir)
-    herald_dir = os.path.join(conf_dir, 'herald')
-    if not os.path.exists(herald_dir):
-        os.makedirs(herald_dir)
-
-    tfiles = ['"java-xmpp.js"', '"java-http.js"',
-              '"python-xmpp.js"', '"python-http.js"']
-
-    transport_files1 = []
-    if "http" in transport_modes:
-        transport_files1.append(tfiles[1])
-    if "xmpp" in transport_modes:
-        transport_files1.append(tfiles[0])
-
-    file_name = os.path.join(herald_dir, 'java-transport.js')
-    with open(file_name, "w") as java_transport:
-        result = """{header}
-{{
-    "import-files" : [ {files} ]
-}}
-""".format(header=WARNING_COMMENT, files=",".join(transport_files1))
-        java_transport.write(result)
-
-    transport_files2 = []
-    if "http" in transport_modes:
-        transport_files2.append(tfiles[3])
-    if "xmpp" in transport_modes:
-        transport_files2.append(tfiles[2])
-
-    file_name = os.path.join(herald_dir, 'python-transport.js')
-    with open(file_name, "w") as python_transport:
-        result = """{header}
-{{
-    "import-files" : [ {files} ]
-}}
-""".format(header=WARNING_COMMENT, files=",".join(transport_files2))
-        python_transport.write(result)
-    if "xmpp" in transport_modes:
-        result = """{header}
-{{
-    "import-files" : [ "all-xmpp.js" ],
-    "composition" : [
-    {{
-        "name" : "herald-xmpp-transport",
-        "properties" : {{
-            "xmpp.server" : "{server}",
-            "xmpp.port" : "{port}",
-            "xmpp.user.jid" : "{user}",
-            "xmpp.user.password" : "{password}"
-        }}
-    }}
-    ]
-}}
-""".format(header=WARNING_COMMENT, server=server, port=port,
-           user=user, password=password)
-
-        file_name = os.path.join(herald_dir, 'all-xmpp.js')
-        with open(file_name, "w") as all_xmpp:
-            all_xmpp.write(result)
-
-
 def update_startup_file(config_file, configuration):
     """
     Updates the provided startup file
@@ -255,88 +122,6 @@ def update_startup_file(config_file, configuration):
     with open(config_file, 'w') as outfile:
         json.dump(configuration, outfile, sort_keys=False,
                   indent=4, separators=(',', ': '))
-
-
-def generate_top_composer_config(node_dir, composition_file, autostart):
-    """
-    Generate Top Composer configuration file_name
-    """
-    conf_dir = os.path.join(node_dir, 'conf')
-    if not os.path.exists(conf_dir):
-        os.makedirs(conf_dir)
-    tc_dir = os.path.join(conf_dir, 'composer')
-    if not os.path.exists(tc_dir):
-        os.makedirs(tc_dir)
-    file_name = os.path.join(tc_dir, 'python-top.js')
-
-    result = """{header}
-{{
-    "import-files" : [ "python-top.js" ],
-    "composition" : [
-    {{
-        "factory" : "cohorte-composer-top-factory",
-        "name" : "cohorte-composer-top",
-        "properties" : {{
-            "autostart" : "{autostart}",
-            "composition.filename" : "{composition}"
-        }}
-    }}
-    ]
-}}
-""".format(header=WARNING_COMMENT, autostart=autostart,
-           composition=composition_file)
-
-    with open(file_name, "w") as top_composer:
-        top_composer.write(result)
-
-
-def delete_top_composer_config(node_dir):
-    """
-    Delete Top Composer configuration
-    """
-    try:
-        shutil.rmtree(os.path.join(node_dir, 'conf', 'composer'))
-    except OSError:
-        pass
-
-
-def generate_common_http(node_dir):
-    """
-    Generates conf/python-common-http.js file.
-    """
-    conf_dir = os.path.join(node_dir, 'conf')
-    if not os.path.exists(conf_dir):
-        os.makedirs(conf_dir)
-    file_name = os.path.join(conf_dir, "python-common-http.js")
-
-    result = """{header}
-{{
-    "import-files" : [ "python-common-http.js" ],
-    "composition" : [
-    {{
-        "name" : "pelix-http-service",
-        "properties" : {{
-            // Use the IPv4 stack
-            "pelix.http.address" : "0.0.0.0"
-        }}
-    }}
-    ]
-}}
-""".format(header=WARNING_COMMENT)
-
-    with open(file_name, "w") as python_common_http:
-        python_common_http.write(result)
-
-
-def delete_common_http(node_dir):
-    """
-    Delete conf/python-common-http.js file.
-    """
-    # print("deleting conf/python-common-http.js file.")
-    try:
-        os.remove(os.path.join(node_dir, 'conf', 'python-common-http.js'))
-    except OSError:
-        pass
 
 
 def parse_version_file(version_file):
@@ -382,6 +167,17 @@ def show_installed_dist_info(dist):
     COHORTE_HOME = dist["COHORTE_HOME"] if "COHORTE_HOME" in dist else "None"
 
     print(msg.format(distribution, version, stage, timestamp, git_branch, git_commit, COHORTE_HOME))
+
+    
+def copy_jpype(a_jpype_source_file, a_jpype_dest_file):
+    """ copy jpype regarding the platform"""
+    shutil.copyfile(a_jpype_source_file, a_jpype_dest_file)   
+
+     
+def control_jpype(a_jpype_dest_file):
+    """ control if jpype library has been copied """
+    return os.path.isfile(a_jpype_dest_file)
+
     
 def setup_jpype(cohorte_home):
     platform_name = platform.system()
@@ -392,7 +188,12 @@ def setup_jpype(cohorte_home):
     elif platform_name == 'Windows':
         jpype_file_name = "_jpype.pyd"
     elif platform_name == 'Linux':
-        jpype_file_name = "_jpype.cpython-34m.so"
+        # test the machine platform X86 or aarch to copy the correct one
+        if platform.machine() == "aarch64":
+            # arm 
+            jpype_file_name = "_jpype.cpython-35m-aarch64-linux-gnu.so"
+        else:
+            jpype_file_name = "_jpype.cpython-34m.so"
     
     jpype_file = os.path.join(repo_dir, jpype_file_name)
     if not os.path.exists(jpype_file):        
@@ -415,13 +216,38 @@ def setup_jpype(cohorte_home):
             shutil.copytree(os.path.join(extra_dir, "jpypex"),
                         os.path.join(repo_dir, "jpypex"))
             # MOD_BD_20170306 support win 32 bits
+            source_jpype_file = None
             if "32bit" in platform.architecture():
                 source_jpype_file = os.path.join(extra_dir, str(platform_name).lower(), "32", jpype_file_name)
             else:
-                source_jpype_file = os.path.join(extra_dir, str(platform_name).lower(), jpype_file_name)
-            
-            shutil.copyfile(source_jpype_file, os.path.join(repo_dir, jpype_file_name))        
-            
+                # get architecture to diff intel from arm
+                if platform_name == 'Linux':
+                    machine_type = platform.machine().lower()
+                  
+                    source_jpype_file = os.path.join(extra_dir, str(platform_name).lower(), machine_type, jpype_file_name)
+                else:
+                    source_jpype_file = os.path.join(extra_dir, str(platform_name).lower(), jpype_file_name)
 
-        except OSError:
+            dest_jpype_file = os.path.join(repo_dir, jpype_file_name)
+            nb_try = 0
+            while nb_try < 3 and not control_jpype(dest_jpype_file):
+                copy_jpype(source_jpype_file, dest_jpype_file)
+                time.sleep(0.1)
+                nb_try = nb_try + 1
+            
+            if nb_try == 3 :
+                # jpype not copied we stop and og the error 
+                msgFailedJPype = """
+                =====================================================================================================
+                =                                                  ERROR 
+                = JPYPE LIBRARY NOT PRESENT IN COHORTE_HOME/repo 
+                = IMPOSSIBLE TO COPY THE FILE FROM {} 
+                = TO {} 
+                =====================================================================================================
+                """.format(source_jpype_file, dest_jpype_file)
+                print(msgFailedJPype)
+                sys.exit(1)
+                
+        except OSError as e:
+            print(e)
             pass

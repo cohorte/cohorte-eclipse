@@ -46,12 +46,9 @@ import cohorte.monitor
 
 # ------------------------------------------------------------------------------
 
-# Module version
-__version_info__ = (3, 0, 0)
-__version__ = ".".join(str(x) for x in __version_info__)
-
-# Documentation strings format
-__docformat__ = "restructuredtext en"
+# Bundle version
+import cohorte.version
+__version__=cohorte.version.__version__
 
 # ------------------------------------------------------------------------------
 
@@ -69,7 +66,6 @@ _logger = logging.getLogger(__name__)
 @Requires('_commander', cohorte.composer.SERVICE_COMMANDER_TOP)
 @Requires('_monitor', cohorte.monitor.SERVICE_MONITOR)
 @Requires('_node_starter', cohorte.SERVICE_NODE_STARTER)
-@Requires('_includer', cohorte.SERVICE_FILE_INCLUDER)
 # ######### added by: Bassem D.
 @Requires('_parser', cohorte.composer.SERVICE_PARSER,
           optional=False)
@@ -90,7 +86,6 @@ class TopComposer(object):
         self._commander = None
         self._context = None
         self._node_starter = None
-        self._includer = None
         # ######### added by: Bassem D.
         self._parser = None
         self._autostart = None
@@ -233,7 +228,8 @@ class TopComposer(object):
         """
         if not self._composition_json:
             # parse the composition file
-            #conf_dir = os.path.join(self._context.get_property("cohorte.base"), )
-            self._composition_json = self._includer.get_content("conf"+os.sep+self._composition_filename,True)
-            
+            conf_dir = os.path.join(self._context.get_property("cohorte.base"), "conf")
+            file_name = os.path.join(conf_dir, self._composition_filename)
+            with open(file_name, "r") as comp_json_file:
+                self._composition_json = json.load(comp_json_file)
         return self._composition_json

@@ -6,7 +6,7 @@ Herald Core directory
 :author: Thomas Calmant
 :copyright: Copyright 2014, isandlaTech
 :license: Apache License 2.0
-:version: 1.0.0
+:version: 1.0.1
 :status: Alpha
 
 ..
@@ -26,14 +26,11 @@ Herald Core directory
     limitations under the License.
 """
 
-# Module version
-import pelix.ipopo.decorators
 
-__version_info__ = (1, 0, 0)
-__version__ = ".".join(str(x) for x in __version_info__)
+# Bundle version
+import herald.version
+__version__=herald.version.__version__
 
-# Documentation strings format
-__docformat__ = "restructuredtext en"
 
 # ------------------------------------------------------------------------------
 
@@ -42,6 +39,8 @@ import herald
 import herald.beans as beans
 
 # Pelix
+import pelix.ipopo.decorators
+
 from pelix.ipopo.decorators import ComponentFactory, Requires, RequiresMap, \
     Provides, BindField, UnbindField, Validate, Invalidate, Instantiate
 from pelix.utilities import is_string

@@ -25,12 +25,13 @@ Common code for isolate starters
 """
 
 # Standard library
+import os
+
 import cohorte
 import cohorte.forker
 import cohorte.utils
-import os
+import cohorte.version
 from pelix.ipopo.decorators import Requires, Validate, Invalidate
-
 
 try:
     # Python 3
@@ -47,14 +48,11 @@ except ImportError:
 
 # ------------------------------------------------------------------------------
 
-# Documentation strings format
-__docformat__ = "restructuredtext en"
-
-# Version
-__version_info__ = (1, 1, 0)
-__version__ = ".".join(str(x) for x in __version_info__)
+# Bundle version
+__version__ = cohorte.version.__version__
 
 # ------------------------------------------------------------------------------
+
 
 @Requires('_environment', cohorte.forker.SERVICE_ENV_STARTER)
 @Requires('_watcher', cohorte.forker.SERVICE_WATCHER)
@@ -62,6 +60,7 @@ class CommonStarter(object):
     """
     Common code for starters
     """
+
     def __init__(self):
         """
         Sets up members
@@ -176,7 +175,10 @@ class CommonStarter(object):
         """
         # Process environment
         env = os.environ.copy()
-
+        # delete node configuration to not use the same pelix shell and http port for the isolate
+        for key in env.keys():
+            if "node" in key:
+                del env[key]
         # add environment variable 
         env_starter = self._environment.get_envs()
         if env_starter != None:
@@ -195,7 +197,7 @@ class CommonStarter(object):
         # ... isolate
         env[cohorte.ENV_UID] = configuration['uid']
         env[cohorte.ENV_NAME] = configuration['name']
-
+      
         # ... node
         env[cohorte.ENV_NODE_UID] = configuration['node_uid']
         env[cohorte.ENV_NODE_NAME] = configuration['node_name']

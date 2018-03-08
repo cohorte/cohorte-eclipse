@@ -29,11 +29,11 @@ import argparse
 import json
 import logging
 import os
+import platform
 import shutil
 import sys
 
 import common
-
 
 # Standard Library
 # cohorte scripts
@@ -82,14 +82,14 @@ def get_external_config(parsed_conf_file, conf_name):
     if parsed_conf_file is not None and conf_name is not None:
         if conf_name == "app-id":
             if "app-id" in parsed_conf_file:
-                parse_value =  parsed_conf_file["app-id"]
+                parse_value = parsed_conf_file["app-id"]
             elif "application-id" in parsed_conf_file:  # compatibility with cohorte 1.0.0
-                parse_value =  parsed_conf_file["application-id"]  #
+                parse_value = parsed_conf_file["application-id"]  #
 
         if conf_name == "node-name":
             if "node" in parsed_conf_file:
                 # Different key name
-                parse_value =  parsed_conf_file["node"].get("name")
+                parse_value = parsed_conf_file["node"].get("name")
             # return parsed_conf_file["node"].get(conf_name)
 
         if conf_name in ("node-name", "kind-of-isolates", "top-composer", "auto-start",
@@ -99,30 +99,28 @@ def get_external_config(parsed_conf_file, conf_name):
                 conf_value = parsed_conf_file["node"].get(conf_name)
                 if conf_value is None:  #
                     if conf_name in "http-port":  # compatibility with cohorte 1.0.0
-                        parse_value =  parsed_conf_file["node"].get("web-admin")  #
+                        parse_value = parsed_conf_file["node"].get("web-admin")  #
                     if conf_name in "shell-port":  #
-                        parse_value =  parsed_conf_file["node"].get("shell-admin")  #
+                        parse_value = parsed_conf_file["node"].get("shell-admin")  #
                 else:
-                    parse_value =  conf_value
+                    parse_value = conf_value
         if conf_name == "env" and "env" in parsed_conf_file:
             envs = []
             for key, value in parsed_conf_file["env"].items():
                 envs.append("{0}={1}".format(key, value))
-            parse_value =  envs
+            parse_value = envs
 
         if conf_name == "transport":
             if "transport" in parsed_conf_file:
-                parse_value =  parsed_conf_file["transport"]
+                parse_value = parsed_conf_file["transport"]
 
         if conf_name.startswith("xmpp-"):
             if "transport-xmpp" in parsed_conf_file:
-                parse_value =  parsed_conf_file["transport-xmpp"].get(conf_name)
+                parse_value = parsed_conf_file["transport-xmpp"].get(conf_name)
 
         if conf_name.startswith("http-"):
             if "transport-http" in parsed_conf_file:
-                parse_value =  parsed_conf_file["transport-http"].get(conf_name)
-    
-    print("get_external_config key={0} , value_found={1} ".format(conf_name,parse_value))
+                parse_value = parsed_conf_file["transport-http"].get(conf_name)
 
     return parse_value
 
@@ -208,9 +206,8 @@ def main(args=None):
                        help="Flag to activate verbose mode")
 
     group.add_argument("-d", "--debug", action="store_true",
-                       dest="is_debug", default=False,
+                       dest="is_debug", default=True,
                        help="Flag activate the debug mode")
-
 
     group.add_argument("--composition-file", action="store",
                        dest="composition_file",
@@ -367,7 +364,6 @@ def main(args=None):
     # export Cohorte Root
     os.environ['COHORTE_ROOT'] = os.environ.get('COHORTE_HOME')
 
-
     # environment property to propagate
     env_isolate = args.env_isolate if args.env_isolate != None else get_external_config(external_config, "env")
     if env_isolate != None and isinstance(env_isolate, list):
@@ -395,7 +391,6 @@ def main(args=None):
         args.is_debug,
         get_external_config(external_config, "debug"), False)
 
-
     if VERBOSE:
         boot_args.append("-v")
 
@@ -414,9 +409,10 @@ def main(args=None):
         print("        use '--app-id' option to provide the application's ID "
               "or update your startup configuration file.")
         return 1
-
+    else:
+        os.environ["APP_ID"] = APPLICATION_ID
     # generate boot config file
-    common.generate_boot_common(COHORTE_BASE, APPLICATION_ID, NODE_DATA_DIR)
+    # common.generate_boot_common(COHORTE_BASE, APPLICATION_ID, NODE_DATA_DIR)
 
     # Node log file
     LOG_DIR = os.path.join(COHORTE_BASE, 'var')
@@ -430,7 +426,7 @@ def main(args=None):
         get_external_config(external_config, "shell-port"), 0)
     # Generate webadmin and shell configs of the cohorte (main) isolate
     # of this node
-    common.generate_boot_forker(COHORTE_BASE, HTTP_PORT, SHELL_PORT)
+    # common.generate_boot_forker(COHORTE_BASE, HTTP_PORT, SHELL_PORT)
 
     # Log
     try:
@@ -461,10 +457,10 @@ def main(args=None):
             args.auto_start,
             get_external_config(external_config, "auto-start"), True)
 
-        common.generate_top_composer_config(COHORTE_BASE, COMPOSITION_FILE,
-                                            AUTO_START)
-    else:
-        common.delete_top_composer_config(COHORTE_BASE)
+        # common.generate_top_composer_config(COHORTE_BASE, COMPOSITION_FILE,
+        # AUTO_START)
+        # else:
+        # common.delete_top_composer_config(COHORTE_BASE)
 
     # show console (or not)    
     if args.install_shell_console:
@@ -492,10 +488,10 @@ def main(args=None):
         HTTP_IPV = set_configuration_value(
             args.http_ipv,
             get_external_config(external_config, "http-ipv"), 6)
-        if HTTP_IPV == 4:
-            common.generate_common_http(COHORTE_BASE)
-        else:
-            common.delete_common_http(COHORTE_BASE)
+       # if HTTP_IPV == 4:
+            # common.generate_common_http(COHORTE_BASE)
+      #  else:
+            # common.delete_common_http(COHORTE_BASE)
 
     if "xmpp" in TRANSPORT_MODES:
         XMPP_SERVER = set_configuration_value(
@@ -520,7 +516,6 @@ def main(args=None):
     - xmpp user jid: {jid}
     - xmpp user password: *
             """.format(server=XMPP_SERVER, port=XMPP_PORT, jid=XMPP_JID))
-
     
     # remove 'conf/herald' folder
     try:
@@ -529,56 +524,61 @@ def main(args=None):
         pass
     
     # create conf/herald configs for node
-    common.generate_herald_conf(COHORTE_BASE, TRANSPORT_MODES,
-                                XMPP_SERVER, XMPP_PORT,
-                                XMPP_JID, XMPP_PASS)
+    # common.generate_herald_conf(COHORTE_BASE, TRANSPORT_MODES,
+    #                            XMPP_SERVER, XMPP_PORT,
+    #                            XMPP_JID, XMPP_PASS)
         # all-xmpp.js
         #
     # else:        
 
     # update configuration if not exists
     CONFIG_FILE = config_file
+
+    configuration = {}
+    actual_dist = common.get_installed_dist_info(COHORTE_HOME)
+    COHORTE_VERSION = actual_dist["version"]
+    configuration["cohorte-version"] = COHORTE_VERSION
+    if APPLICATION_ID:
+        configuration["app-id"] = APPLICATION_ID
+
+    configuration["node"] = {
+        "name": NODE_NAME,
+        "top-composer": IS_TOP_COMPOSER,
+        "http-port": HTTP_PORT,
+        "shell-port": SHELL_PORT,
+        "use-cache": USE_CACHE,
+        "recomposition-delay": RECOMPOSITION_DELAY,
+        "interpreter": PYTHON_INTERPRETER,
+        "console": INSTALL_SHELL_CONSOLE,
+        "data-dir": NODE_DATA_DIR,
+        "verbose": VERBOSE,
+        "debug": DEBUG}
+
+    if IS_TOP_COMPOSER:
+        configuration["node"]["auto-start"] = AUTO_START
+        configuration["node"]["composition-file"] = COMPOSITION_FILE
+
+    configuration["transport"] = TRANSPORT_MODES
+    if "xmpp" in TRANSPORT_MODES:
+        configuration["transport-xmpp"] = {
+            "xmpp-server": XMPP_SERVER,
+            "xmpp-port": XMPP_PORT,
+            "xmpp-user-jid": XMPP_JID,
+            "xmpp-user-password": XMPP_PASS
+        }
+    if "http" in TRANSPORT_MODES:
+        configuration["transport-http"] = {"http-ipv": HTTP_IPV}
+
     if not os.path.exists(CONFIG_FILE) or args.update_config_file:
-        configuration = {}
-        actual_dist = common.get_installed_dist_info(COHORTE_HOME)
-        COHORTE_VERSION = actual_dist["version"]
-        configuration["cohorte-version"] = COHORTE_VERSION
-        if APPLICATION_ID:
-            configuration["app-id"] = APPLICATION_ID
-
-        configuration["node"] = {
-            "name": NODE_NAME,
-            "top-composer": IS_TOP_COMPOSER,
-            "http-port": HTTP_PORT,
-            "shell-port": SHELL_PORT,
-            "use-cache": USE_CACHE,
-            "recomposition-delay": RECOMPOSITION_DELAY,
-            "interpreter": PYTHON_INTERPRETER,
-            "console": INSTALL_SHELL_CONSOLE,
-            "data-dir": NODE_DATA_DIR,
-            "verbose": VERBOSE,
-            "debug": DEBUG}
-
-        if IS_TOP_COMPOSER:
-            configuration["node"]["auto-start"] = AUTO_START
-            configuration["node"]["composition-file"] = COMPOSITION_FILE
-
-        configuration["transport"] = TRANSPORT_MODES
-        if "xmpp" in TRANSPORT_MODES:
-            configuration["transport-xmpp"] = {
-                "xmpp-server": XMPP_SERVER,
-                "xmpp-port": XMPP_PORT,
-                "xmpp-user-jid": XMPP_JID,
-                "xmpp-user-password": XMPP_PASS
-            }
-        if "http" in TRANSPORT_MODES:
-            configuration["transport-http"] = {"http-ipv": HTTP_IPV}
 
         common.update_startup_file(CONFIG_FILE, configuration)
         print("[INFO] config file '" + CONFIG_FILE + "' updated! ")
         if args.update_config_file:
             return 0
         
+   # set configuration run as environment vairable 
+    os.environ["run"] = json.dumps(configuration)   
+    
     # get python interpreter version (to be used by cohorte)
     PYTHON_VERSION = "{0}.{1}.{2}".format(sys.version_info[0], sys.version_info[1], sys.version_info[2])
     # get cohorte_home version
@@ -647,37 +647,20 @@ def main(args=None):
     # write msg1 to log file
     out_logfile = open(str(os.environ.get('COHORTE_LOGFILE')), "w")
     out_logfile.write(msg1)
-    
 
     msg2 = ""
+    # => should have python 3.6
+    python_version_tuple = tuple(map(int, (PYTHON_VERSION.split("."))))
+    w_plateform = platform.system()
+    if w_plateform == "Windows" and not python_version_tuple > (3, 4) :
+        msg2 = """
+        You should have Python 3.4 to launch  isolates on windows !
+        Your Python version is not yet supported!"""
+            
     if version["distribution"] not in ("cohorte-python-distribution") and KIND_OF_ISOLATES != "python-only":
-        # java distribution
-        # => should have python 3.4
-        python_version_tuple = tuple(map(int, (PYTHON_VERSION.split("."))))
-        if python_version_tuple < (3, 4):
-            msg2 = """
-            As all the isolates of the node aren't Python ones, you should have Python 3.4 to launch Java isolates !
-
-            If your node has only Python isolates, please download cohorte-python-distribution which requires
-            Python 2.7 or 3.4, or set the Kind of Isolates you want.
-            @lookat :  --kind-of-isolates=['python-only' | 'python-java']
-
-            It you have Python 3.4 installed on your machine and its Python 2.x which is used,
-            set the "setintrepreter" argument when starting your node.
-            @lookat : --interpreter <PATH_TO_PYTHON34> """
-            print(msg2)
-            # write to log file
-            with open(str(os.environ.get('COHORTE_LOGFILE')), "w") as log_file:
-                log_file.write(msg1 + msg2)
-            return 3
-        elif python_version_tuple > (3, 4):
-            msg2 = """
-            You should have Python 3.4 to launch Java isolates!
-            Your Python version is not yet supported!"""
 
         # change jpype implementation depending on platform system
         common.setup_jpype(COHORTE_HOME)        
-
 
     # starting cohorte isolate
     result_code = 0
@@ -701,10 +684,10 @@ def main(args=None):
     # MOD_OG_20170404 - close log
     out_logfile.close()
 
-
     import cohorte.boot.boot as boot
     # change executable to run the correct script in isolate starter
     return boot.main(boot_args)
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.WARNING)

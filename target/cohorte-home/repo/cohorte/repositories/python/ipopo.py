@@ -28,23 +28,19 @@ import ast
 import logging
 import threading
 
-# Pelix
-from pelix.utilities import is_string
-from pelix.ipopo.decorators import ComponentFactory, Provides, Invalidate, \
-    Property, Requires, Validate
-
-# Repository beans
 import cohorte.repositories
 from cohorte.repositories.beans import Factory
+import cohorte.version
+from pelix.ipopo.decorators import ComponentFactory, Provides, Invalidate, \
+    Property, Requires, Validate
+from pelix.utilities import is_string
 
+
+# Pelix
+# Repository beans
 # ------------------------------------------------------------------------------
-
-# Documentation strings format
-__docformat__ = "restructuredtext en"
-
-# Version
-__version_info__ = (1, 1, 0)
-__version__ = ".".join(str(x) for x in __version_info__)
+# Bundle version
+__version__ = cohorte.version.__version__
 
 # ------------------------------------------------------------------------------
 
@@ -154,10 +150,16 @@ def _extract_module_factories(filename):
     """
     visitor = ComponentFactoryVisitor()
     try:
-        with open(filename) as filep:
+        with open(filename,encoding="utf8") as filep:
             source = filep.read()
-    except (OSError, IOError) as ex:
-        raise ValueError("Error reading {0}: {1}".format(filename, ex))
+    except (OSError, IOError,TypeError) as ex:
+        try:
+            import io
+            with io.open(filename,encoding="utf8") as filep:
+                source = filep.read()
+        except (OSError, IOError) as ex2:
+            _logger.exception(ex2)
+            raise ValueError("Error reading {0}: {1}".format(filename, ex2))
 
     try:
         module = ast.parse(source, filename, 'exec')
@@ -360,7 +362,6 @@ class IPopoRepository(object):
             for repository in self._repositories:
                 for artifact in repository.walk():
                     try:
-                     
                         self.add_artifact(artifact)
                     except ValueError as ex:
                         # Log the exception instead of stopping here
