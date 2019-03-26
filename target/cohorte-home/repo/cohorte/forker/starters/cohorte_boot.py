@@ -32,6 +32,7 @@ import subprocess
 import sys
 
 import cohorte
+import cohorte.boot.boot as boot
 import cohorte.forker
 import cohorte.forker.starters.common as common
 import cohorte.monitor
@@ -39,10 +40,11 @@ import cohorte.utils
 import cohorte.version
 from herald import beans
 import herald
+import threading
 from herald.exceptions import HeraldException
 import pelix.http as http
 from pelix.ipopo.decorators import ComponentFactory, Requires, Provides, \
-    Property, Instantiate
+    Property, Instantiate, Validate
 
 
 # Pelix framework
@@ -85,7 +87,7 @@ class CohorteBoot(common.CommonStarter):
 
         # Signal sender
         self._sender = None
-
+        self._context = None
         # Clean stop timeout (5 seconds)
         self._timeout = 5.
 
@@ -154,13 +156,21 @@ class CohorteBoot(common.CommonStarter):
         if self._context.get_property(cohorte.PROP_COLORED):
             args.append('--color')
 
-        # Run the process and return its reference
-        return subprocess.Popen(args, executable=args[0],
-                                env=environment,
-                                cwd=working_directory,
-                                stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT)
+        if self._context.get_property(cohorte.PROP_ALL_IN_ONE):
+            w_thread = threading.Thread(target=boot.main,
+                         args=([args[3:],self._context.get_bundle(0)]),
+                         name="all_in_one_isolate")
+            w_thread.start()
+           
+            return w_thread.ident 
+        else: 
+            # Run the process and return its reference
+            return subprocess.Popen(args, executable=args[0],
+                                    env=environment,
+                                    cwd=working_directory,
+                                    stdin=subprocess.PIPE,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
 
     def start(self, configuration, state_updater_url):
         """
@@ -197,6 +207,7 @@ class CohorteBoot(common.CommonStarter):
         forker_http_port = port        
 
         try:
+          
             # Start the boot script
             process = self._run_boot_script(
                 working_dir, configuration, config_url, state_updater_url,
@@ -208,7 +219,6 @@ class CohorteBoot(common.CommonStarter):
 
         # Store the isolate process information
         self._isolates[uid] = process
-
         # Start watching after the isolate
         self._watcher.watch(uid, name, process)
 
@@ -265,3 +275,5 @@ class CohorteBoot(common.CommonStarter):
             # Isolate might already be removed from this component by the
             # forker
             pass
+        
+ 

@@ -212,7 +212,7 @@ class IOHandler(object):
         """
         with self.__lock:
             self.output.write(to_str(data, self.encoding).encode()
-                              .decode(self.out_encoding, errors="replace"))
+                              )
 
     def write_line(self, line, *args, **kwargs):
         """

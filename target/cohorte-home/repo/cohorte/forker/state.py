@@ -160,14 +160,15 @@ class IsolateStateDirectory(object):
         with self._directory_lock:
             # Grab the waiter thread-safely (can raise a KeyError)
             event = self._waiters[uid]
-
-        # Wait the event to come
-        event.wait(timeout)
-        if not event.is_set():
-            raise ValueError("Unknown UID after timeout: %s", uid)
-        elif uid not in self._directory:
-            # We have been awaken by clear_isolate
-            raise ValueError("UID %s has been cleared.", uid)
+            
+        if not self._context.get_property(cohorte.PROP_ALL_IN_ONE):
+            # Wait the event to come
+            event.wait(timeout)
+            if not event.is_set():
+                raise ValueError("Unknown UID after timeout: %s", uid)
+            elif uid not in self._directory:
+                # We have been awaken by clear_isolate
+                raise ValueError("UID %s has been cleared.", uid)
 
         # Just in case someone uses an if...
         return True
@@ -179,6 +180,7 @@ class IsolateStateDirectory(object):
 
         :param context: The bundle context
         """
+        self._context = context
         _logger.debug("Isolate directory validated")
 
     @Invalidate

@@ -106,6 +106,9 @@ PROP_NODE_DATA_DIR = 'cohorte.node.data.dir'
 PROP_RUN_TOP_COMPOSER = 'cohorte.composer.top.run'
 """ If present, the monitor must load the top composer """
 
+PROP_ALL_IN_ONE = 'cohorte.all.in.one'
+""" If present, the isolate is launch in 1 process. no monitor launched """
+
 PROP_SHELL_CONSOLE = 'cohorte.shell.console'
 """ If present, the isolate must start the shell text UI """
 

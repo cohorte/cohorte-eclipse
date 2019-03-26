@@ -27,7 +27,7 @@ Starts basic executable file as isolates
 # Standard library
 import logging
 import subprocess
-
+import threading
 # Pelix framework
 from pelix.ipopo.decorators import ComponentFactory, Property, Provides, \
     Instantiate
@@ -35,6 +35,7 @@ from pelix.ipopo.decorators import ComponentFactory, Property, Provides, \
 # COHORTE modules
 import cohorte.forker
 import cohorte.forker.starters.common as common
+import cohorte.boot.boot as boot
 
 # ------------------------------------------------------------------------------
 
@@ -113,7 +114,14 @@ class ExeStarter(common.CommonStarter):
         io_watch = configuration.get('io_watch', True)
 
         # Start the process
-        process = subprocess.Popen(arguments, executable=arguments[0],
+        if self._context.get_property(cohorte.PROP_ALL_IN_ONE):
+            w_thread = threading.Thread(target=boot.main,
+                         args=arguments,framework= self._context.get_bundle(0),
+                         name="all_in_one_isolate")
+            w_thread.start()
+            process = w_thread.ident 
+        else: 
+            process = subprocess.Popen(arguments, executable=arguments[0],
                                    env=environment,
                                    cwd=working_directory,
                                    stdin=subprocess.PIPE,
@@ -122,9 +130,10 @@ class ExeStarter(common.CommonStarter):
 
         # Store the isolate process information
         self._isolates[uid] = process
+        if not self._context.get_property(cohorte.PROP_ALL_IN_ONE):
 
-        # Start watching after the isolate
-        self._watcher.watch(uid, name, process, io_watch)
+            # Start watching after the isolate
+            self._watcher.watch(uid, name, process, io_watch)
 
         # Don't wait for the state to be updated
         return False

@@ -38,6 +38,7 @@ import cohorte.version
 import pelix.framework
 from pelix.ipopo.constants import get_ipopo_svc_ref
 
+
 # Ensure that the content of PYTHONPATH has priority over other paths
 # This is necessary on Windows, where packages installed in 'develop' mode
 # have priority over the PYTHONPATH.
@@ -93,6 +94,7 @@ def _get_looper(context, looper_name):
     return bundle.get_module().get_looper()
 
 
+
 def _get_loader(context, loader_bundle):
     """
     Retrieves/instantiates the loader service/component from the given bundle
@@ -109,9 +111,14 @@ def _get_loader(context, loader_bundle):
                              cohorte.BUNDLE_ISOLATE_LOADER_FACTORY, None)
 
     if loader_factory:
+        svc_ref = context.get_service_reference(cohorte.SERVICE_ISOLATE_LOADER)
+        if svc_ref:
+            _logger.debug("Found an isolate loader service")
+            return context.get_service(svc_ref)
         # Instantiate the component
         ipopo = get_ipopo_svc_ref(context)[1]
         _logger.debug("Instantiating component of type '%s'", loader_factory)
+        
         return ipopo.instantiate(loader_factory, 'cohorte-isolate-loader')
     else:
         # Find the loader service
@@ -126,7 +133,7 @@ def _get_loader(context, loader_bundle):
 
 
 def load_isolate(pelix_properties, state_updater_url=None,
-                 looper_name=None, fail_on_pdb=False):
+                 looper_name=None, fail_on_pdb=False,framework=None):
     """
     Starts a Pelix framework, installs iPOPO and boot modules and waits for
     the framework to stop
@@ -151,10 +158,20 @@ def load_isolate(pelix_properties, state_updater_url=None,
         if repo not in sys.path:
             _logger.debug("Adding %s to Python path", repo)
             sys.path.insert(0, repo)
+            
 
-    # Prepare the framework
-    framework = \
-        pelix.framework.FrameworkFactory.get_framework(pelix_properties)
+    # Prepare the framework    
+    if framework == None:
+        framework = \
+            pelix.framework.FrameworkFactory.get_framework(pelix_properties)
+    else:
+        context = framework.get_bundle_context()
+        # check if it's all in one 
+        if not context.get_property(cohorte.PROP_ALL_IN_ONE):
+            raise Exception("Can't instianciate new framework ! Severe error")
+        else:
+            for prop in pelix_properties:
+                framework.add_property(prop)
 
     if not looper_name:
         # Run the framework in the main thread (nothing to do)
@@ -240,7 +257,7 @@ def _run_framework(framework, state_updater_url, fail_on_pdb):
             context.install_bundle("pelix.shell.console").start()
 
         # Find the isolate loader to use
-        if context.get_property(cohorte.PROP_CONFIG_BROKER):
+        if context.get_property(cohorte.PROP_CONFIG_BROKER) :
             # If a broker has been given, use the Broker client...
             loader_bundle_name = 'cohorte.boot.loaders.broker'
         else:
@@ -264,6 +281,7 @@ def _run_framework(framework, state_updater_url, fail_on_pdb):
             # Load the isolate
             loader.load(None)
         except Exception as ex:
+            _logger.exception(ex)
             # Something wrong occurred
             loader.update_state(constants.STATE_FAILED, str(ex))
             raise
@@ -479,7 +497,7 @@ def configure_logger(logfile, debug, verbose, color):
 # ------------------------------------------------------------------------------
 
 
-def main(args=None):
+def main(args=None,framework=None):
     """
     Script entry point if called directly.
     Uses sys.argv to determine the boot options if the *args* parameter is
@@ -492,7 +510,7 @@ def main(args=None):
     """
     # override main module for  the start of isolate 
     sys.modules["__main__"] = sys.modules[__name__]
-    
+
     parser = argparse.ArgumentParser(description="Cohorte Python bootstrap")
     # Isolate boot parameters
     group = parser.add_argument_group("Isolate boot")
@@ -548,6 +566,10 @@ def main(args=None):
                         dest="top_composer", default=False,
                         help="If True and given to a monitor, starts the "
                         "TopComposer")
+    
+    parser.add_argument('-a', "--all-in-one", action="store_true",
+                        dest="all_in_one", default=False,
+                        help="If True launch the isolate in one process")
 
     parser.add_argument("--console", action="store_true",
                         dest="install_shell_console", default=False,
@@ -579,7 +601,7 @@ def main(args=None):
 
     # TODO add envs property if it's passed in order to be retrieve by environmentParameter component 
     if args.env_isolate_param:
-         # The isolate environment paremter
+        # The isolate environment paremter
         framework_properties[cohorte.PROP_ENV_STARTER] = args.env_isolate_param
 
     if args.isolate_uid:
@@ -612,6 +634,11 @@ def main(args=None):
     if args.forker_http_port:
         # The forker Http port
         framework_properties[cohorte.PROP_FORKER_HTTP_PORT] = args.forker_http_port
+        
+    if args.all_in_one:
+        # lauch the isolate in the forker as a thread
+        # check if there only 1 isolate for this application
+        framework_properties[cohorte.PROP_ALL_IN_ONE] = args.all_in_one
 
     # Run PDB on unhandled exceptions, in debug mode
     use_pdb = args.debug and sys.stdin.isatty()
@@ -640,7 +667,7 @@ def main(args=None):
     try:
         # Load the isolate and wait for it to stop
         load_isolate(framework_properties, args.state_updater,
-                     args.looper_name, use_pdb)
+                     args.looper_name, use_pdb, framework)
         return 0
     except Exception as ex:
         _logger.exception("Error running the isolate: %s", ex)

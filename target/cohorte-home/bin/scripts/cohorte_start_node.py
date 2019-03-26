@@ -29,7 +29,6 @@ import argparse
 import json
 import logging
 import os
-import platform
 import shutil
 import sys
 
@@ -200,13 +199,17 @@ def main(args=None):
     group.add_argument("--top-composer", action="store",
                        dest="is_top_composer",
                        help="Flag indicating that this node is a Top Composer")
+    
+    group.add_argument("--all-in-one", action="store",
+                       dest="is_all_in_one",
+                       help="Flag indicating that the isolate should be start without the monitor ")
 
     group.add_argument("-v", "--verbose", action="store_true",
                        dest="is_verbose", default=False,
                        help="Flag to activate verbose mode")
 
     group.add_argument("-d", "--debug", action="store_true",
-                       dest="is_debug", default=True,
+                       dest="is_debug", default=False,
                        help="Flag activate the debug mode")
 
     group.add_argument("--composition-file", action="store",
@@ -436,6 +439,16 @@ def main(args=None):
     if not os.path.exists(os.path.join(COHORTE_BASE, 'var')):
         os.makedirs(os.path.join(COHORTE_BASE, 'var'))
 
+    if args.is_all_in_one:
+        IS_ALL_IN_ONE = args.is_all_in_one.lower() in ("true", "yes")
+    else:
+        IS_ALL_IN_ONE = set_configuration_value(
+            None,
+            get_external_config(external_config, "all-in-one"), False)
+          
+    if IS_ALL_IN_ONE:
+        boot_args.append("-a")
+
     # Top Composer
     if args.is_top_composer:
         IS_TOP_COMPOSER = args.is_top_composer.lower() in ("true", "yes")
@@ -443,6 +456,8 @@ def main(args=None):
         IS_TOP_COMPOSER = set_configuration_value(
             None,
             get_external_config(external_config, "top-composer"), False)
+
+
 
     if IS_TOP_COMPOSER:
         boot_args.append("-t")
@@ -651,10 +666,10 @@ def main(args=None):
     msg2 = ""
     # => should have python 3.6
     python_version_tuple = tuple(map(int, (PYTHON_VERSION.split("."))))
-    w_plateform = platform.system()
-    if w_plateform == "Windows" and not python_version_tuple > (3, 4) :
+   
+    if not python_version_tuple > (3, 4):
         msg2 = """
-        You should have Python 3.4 to launch  isolates on windows !
+        You should have Python 3.4 to launch  isolates!
         Your Python version is not yet supported!"""
             
     if version["distribution"] not in ("cohorte-python-distribution") and KIND_OF_ISOLATES != "python-only":

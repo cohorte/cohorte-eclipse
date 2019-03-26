@@ -21,7 +21,7 @@
 		"name" : "pelix-remote-shell",
 		"properties" : {
 			// Random shell port
-			"pelix.shell.port" : "${run:node.shell-port}"
+			"pelix.shell.port" : "0"
 		}
 	},
 

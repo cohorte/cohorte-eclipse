@@ -101,18 +101,19 @@ class IsolateWatcher(object):
         """
         # Clear state
         self._stop_event.clear()
-
+        self._context = context;
         # Get utility methods
         self._utils = cohorte.utils.get_os_utils()
-
-        # Start the notification thread
-        self._pool.start()
-
-        # Start the waiting thread
-        self._wait_thread = threading.Thread(target=self.__wait_thread,
-                                             name="Isolate-Waiter")
-        self._wait_thread.daemon = True
-        self._wait_thread.start()
+        if not context.get_property(cohorte.PROP_ALL_IN_ONE):
+            # don't wait on isolate pid as it has been launch in the same process for all in one
+            # Start the notification thread
+            self._pool.start()
+    
+            # Start the waiting thread
+            self._wait_thread = threading.Thread(target=self.__wait_thread,
+                                                 name="Isolate-Waiter")
+            self._wait_thread.daemon = True
+            self._wait_thread.start()
 
     @Invalidate
     def _invalidate(self, context):
@@ -123,20 +124,21 @@ class IsolateWatcher(object):
         self._stop_event.set()
         for _, event in list(self._io_threads.values()):
             event.set()
-
-        # Wait for the waiter thread to stop
-        self._wait_thread.join()
-
-        # FIXME: Do not wait for I/O threads as they might be stuck
-
-        # Stop the notification thread
-        self._pool.stop()
-
-        # Clean up
-        self._names.clear()
-        self._isolates.clear()
-        self._wait_thread = None
-        self._io_threads.clear()
+        if not context.get_property(cohorte.PROP_ALL_IN_ONE):
+    
+            # Wait for the waiter thread to stop
+            self._wait_thread.join()
+    
+            # FIXME: Do not wait for I/O threads as they might be stuck
+    
+            # Stop the notification thread
+            self._pool.stop()
+    
+            # Clean up
+            self._names.clear()
+            self._isolates.clear()
+            self._wait_thread = None
+            self._io_threads.clear()
 
     @staticmethod
     def _notify_listeners(listeners, uid, name):
@@ -162,11 +164,12 @@ class IsolateWatcher(object):
             with self.__lock:
                 # Copy the isolates information
                 isolates = list(self._isolates.items())
-
             for uid, process in isolates:
                 try:
                     # Check PID presence
-                    self._utils.wait_pid(process.pid, .1)
+                        # don't check PID if all in one is setted  
+
+                        self._utils.wait_pid(process.pid, .1)
                 except cohorte.utils.TimeoutExpired:
                     # Time out expired : process is still there,
                     # continue the loop
@@ -184,31 +187,34 @@ class IsolateWatcher(object):
                                            listeners, uid, name)
 
     @staticmethod
-    def __io_thread(uid, process, event):
+    def __io_thread(uid, process, event, context):
         """
         Thread that looks for the I/O of the given process
 
         :param uid: Isolate UID
         :param process: Isolate process
         :param event: Loop control event
+        :context osgi cohorte context 
         """
         # Setup the logger for this isolate
         logger = logging.getLogger("io_watcher.{0}".format(uid))
-
-        while not event.is_set():
-            line = process.stdout.readline()
-            if not line:
-                break
-
-            try:
-                # Try to decode the line
-                line = line.decode('UTF-8').rstrip()
-            except (AttributeError, UnicodeDecodeError):
-                # Not a string line
-                pass
-
-            # In debug mode, print the raw output
-            logger.debug(line)
+        if not context.get_property(cohorte.PROP_ALL_IN_ONE):
+            while not event.is_set():
+                
+                line = process.stdout.readline()
+              
+                if not line:
+                    break
+    
+                try:
+                    # Try to decode the line
+                    line = line.decode('UTF-8').rstrip()
+                except (AttributeError, UnicodeDecodeError):
+                    # Not a string line
+                    pass
+    
+                # In debug mode, print the raw output
+                logger.debug(line)
 
     def watch(self, uid, name, process, watch_io=True):
         """
@@ -227,17 +233,19 @@ class IsolateWatcher(object):
             self._isolates[uid] = process
             self._names[uid] = name
 
-            if watch_io:
+            if watch_io  :
                 # Start the I/O thread
                 event = threading.Event()
                 thread = threading.Thread(target=self.__io_thread,
-                                          args=(uid, process, event),
+                                          args=(uid, process, event,self._context),
                                           name="IOWatcher-{0}".format(uid))
                 thread.daemon = True
                 thread.start()
 
                 # Store it
                 self._io_threads[uid] = (thread, event)
+           
+
 
     def unwatch(self, uid):
         """

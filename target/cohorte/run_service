@@ -1,0 +1,18 @@
+#!/bin/bash
+
+COMPOSITION_FILE=composition.js
+export JAVA_HOME=/opt/java
+export COHORTE_HOME=/opt/cohorte/home
+export COHORTE_BASE=/opt/cohorte/iot_pack_device
+export COHORTE_APP_ID=quasar
+
+# get kind of connection for lora (usb or gpio) and set env variable 
+SERIAL_TYPE="gpio"
+SERIAL_PORT="/dev/ttyS0"
+if [ -f "/dev/ttyarmn8lw" ]; then
+	SERIAL_TYPE="usb"
+	SERIAL_PORT="/dev/ttyarmn8lw"
+fi
+
+
+bash ${COHORTE_HOME}/bin/cohorte-start-node --base ${COHORTE_BASE} --use-config ${COHORTE_BASE}/conf/run.js --composition-file ${COMPOSITION_FILE} -d -v -c --console false --interpreter python3 --http-port 9000 --shell-port 9001 --env "LORA_SERIAL_PORT=$SERIAL_PORT" --env "LORA_SERIAL_TYPE=$SERIAL_TYPE" --app-id $COHORTE_APP_ID $* &

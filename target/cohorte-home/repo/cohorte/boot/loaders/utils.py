@@ -25,6 +25,7 @@ __version__=cohorte.version.__version__
 
 # ------------------------------------------------------------------------------
 
+s_instanciate_component = {}
 
 def boot_load(context, boot_config):
     """
@@ -63,7 +64,7 @@ def boot_load(context, boot_config):
             else:
                 # Fatal error
                 raise
-
+            
     if boot_config.composition:
         # Instantiate iPOPO components, if any
         with constants.use_ipopo(context) as ipopo:
@@ -72,9 +73,10 @@ def boot_load(context, boot_config):
                 # bundle update
                 if constants.IPOPO_AUTO_RESTART not in component.properties:
                     component.properties[constants.IPOPO_AUTO_RESTART] = True
-
-                # Instantiate the component
-                ipopo.instantiate(component.factory, component.name,
-                                  component.properties)
+                    
+                    if context.get_property(cohorte.PROP_ALL_IN_ONE) and not component.name in s_instanciate_component.keys():
+                        # Instantiate the component
+                        s_instanciate_component[component.name] = ipopo.instantiate(component.factory, component.name,
+                                      component.properties)
     else:
         logger.debug("No component to instantiate")
